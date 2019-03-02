@@ -37,8 +37,6 @@ int main(int argc, char * argv[])
    struct user* users = (struct user*)malloc(sizeof(struct user)*nuser);
    int ind = 0;
     while ((read = getline(&line, &len, fp)) != -1) {
-        printf("Retrieved line of length %zu:\n", read);
-        printf("%s", line);
           char * pch;
           pch = strtok(line," ");
           int cnt = 0;
@@ -162,13 +160,60 @@ int main(int argc, char * argv[])
         
         // client closed the connection
         if (num == 0) {
-          printf("[%d]Closing connection\n", i);
+          printf("[%d]Closing connection for a client\n", i);
           close(clients[i]);
           FD_CLR(clients[i], &read_fd_set); // clear the file descriptor set for client[i]
           clients[i] = -1;
         } else {
           printf("[%d]Received: %s\n", i, buf);
-          send(clients[i], buf, num, 0); // echo the message back to client
+          char * pch;
+          pch = strtok(line," ");
+          int cnt = 0;
+          char cmd[10];
+          char argument[100];
+          while (pch != NULL){
+            if (cnt == 0) strcpy(cmd, pch);
+            else strcpy(argument, pch);
+            pch = strtok (NULL, " ");
+            cnt++;
+          }
+          printf("%s\n", cmd);
+          if (strcmp (cmd,"USER") == 0){
+            printf("%s\n", "OK4");
+            int i=0;
+            int ind = -1;
+            for (i=0;i<nuser;i++){
+                printf("%s\n","OKK");
+                if (strcmp(users[i].name,argument)==0){
+                    ind = i;
+                    break;
+                }
+            }
+            if (ind == -1){
+                char message[] = "Username does not exist";
+                printf("%s\n", "OK2");
+                send(clients[i],message,strlen(message),0);
+                printf("%s\n", "Ok3");
+            }
+            else {
+                strcpy(buf,"Username OK, password required");
+                send(clients[i],buf,strlen(buf),0);
+            }
+          }
+          else if (strcmp (cmd,'PASS') == 0){
+
+
+          }
+
+          else if (strcmp (cmd,'QUIT') == 0){
+              printf("[%d]Closing connection for a client\n", i);
+              close(clients[i]);
+              FD_CLR(clients[i], &read_fd_set); // clear the file descriptor set for client[i]
+              clients[i] = -1;
+              }
+            else{
+
+            }
         }
       }
     }
