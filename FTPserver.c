@@ -14,7 +14,7 @@
 #define MAXCLIENTS 30
 
 struct user{
-    char name[30]; 
+    char name[30];
     char password[30];
 };
 
@@ -81,7 +81,7 @@ int main(int argc, char * argv[])
     printf("Can't bind socket\n");
     exit(1);
   }
-  
+
   if (listen(master_socket, 5) < 0) {
     close(master_socket);
     printf("Can't listen on socket\n");
@@ -99,10 +99,10 @@ int main(int argc, char * argv[])
 
     // add child sockets to set
     for (i = 0; i < MAXCLIENTS; i++) {
-        
+
         // get socket descriptor
         client_socket = clients[i];
-        
+
         // if socket descriptor is valid, then add it to read list
         if(client_socket > 0) {
           FD_SET(client_socket, &read_fd_set);
@@ -112,10 +112,10 @@ int main(int argc, char * argv[])
         if(client_socket > maxfd)
             maxfd = client_socket;
     }
-    
+
     // wait for activity on one of the sockets
     select(maxfd+1, &read_fd_set, NULL, NULL, NULL);
-    
+
     // check for activity on the master_socket (if so, then it must be an incoming request)
     if (FD_ISSET(master_socket, &read_fd_set)) {
 
@@ -130,7 +130,7 @@ int main(int argc, char * argv[])
 
       // add new socket to array of clients
       for (i = 0; i < MAXCLIENTS; i++) {
-          
+
           // if position is empty, add it
           if (clients[i] < 0) {
               clients[i] = accepted_socket;
@@ -156,10 +156,10 @@ int main(int argc, char * argv[])
 
       // check for activity
       if (FD_ISSET(clients[i], &read_fd_set)) {
-        
+
         memset(buf, 0, sizeof(buf)); //reset the buffer
         int num = recv(clients[i], buf, 1024, 0); // read from socket
-        
+
         // client closed the connection
         if (num == 0) {
           printf("[%d]Closing connection\n", i);
