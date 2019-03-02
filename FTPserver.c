@@ -1,134 +1,176 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 #include <netinet/in.h>
-#include <netdb.h>
 #include <arpa/inet.h>
-#include <err.h>
+#include <stdlib.h>
+#include <errno.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <signal.h>
 #include <string.h>
 
-char response[] = "HTTP/1.1 200 OK\r\n\
-Content-Type: text/html\r\n\
-Content-Length: 9\r\n\r\n\
-It works!\r\n";
 
-int main(){
-    int sock_fd, client_fd;
-    int port = 8080;
-    struct sockaddr_in server_addr, client_addr;
+#define MAXCLIENTS 30
 
-    // initializing the sockaddr to 0
-    memset(&client_addr, 0, sizeof(client_addr));
-    memset(&server_addr, 0, sizeof(server_addr));
+struct user{
+    char name[30]; 
+    char password[30];
+};
 
-    // setting the server address and port
-    server_addr.sin_family = AF_INET;
-    server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-    server_addr.sin_port = htons(port);
+int main(int argc, char * argv[])
+{
+   FILE *fp;
+   char * line = NULL;
+    size_t len = 0;
+    ssize_t read;
 
-    // opening the socket
-    // your code goes here
-    sock_fd = socket(AF_INET, SOCK_STREAM, 0);
 
-    // set SO_REUSEADDR to avoid binding issues
-    int reuse = 1;
-    setsockopt(sock_fd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(int));
-
-    // binding the socket to server_addr
-    // your code goes here
-    int status = bind(sock_fd,(struct sockaddr *) &server_addr, sizeof(struct sockaddr_in));
-
-    // listening for connections
-    // your code goes here
-    status = listen(sock_fd, 5);
-
-    // accepting a connection
-    // your code goes here
-    fd_set read_fd_set;
-    while(1) {
-        // clear the socket set
-        FD_ZERO(&read_fd_set);
-
-        // add STDIN to file descriptor set
-        FD_SET(sock_fd, &read_fd_set);
-
-        // wait for activity on file descriptor set
-        select(sock_fd+1, &read_fd_set, NULL, NULL, NULL);
-
-        // check for activity on file descriptor
-        if (FD_ISSET(sock_fd, &read_fd_set)) {
-          char buf[1024];
-          memset(buf, 0, sizeof(buf));
-          read(sock_fd, buf, sizeof(buf));
-          printf("A key was pressed! %s\n", buf);
-        }
+   fp = fopen("users.txt", "r"); // read mode
+   if (fp == NULL)
+   {
+      perror("Error while opening the file.\n");
+      exit(EXIT_FAILURE);
+   }
+   read = getline(&line, &len, fp);
+   int nuser = atoi(line);
+   struct user* users = (struct user*)malloc(sizeof(struct user)*nuser);
+   int ind = 0;
+    while ((read = getline(&line, &len, fp)) != -1) {
+        printf("Retrieved line of length %zu:\n", read);
+        printf("%s", line);
+          char * pch;
+          pch = strtok(line," ");
+          int cnt = 0;
+          while (pch != NULL){
+            if (cnt == 0) strcpy(users[ind].name, pch);
+            else strcpy(users[ind].password, pch);
+            pch = strtok (NULL, " ");
+            cnt++;
+          }
     }
-    socklen_t sock_len = sizeof(client_addr);
-    int client_sockfd = accept(sock_fd, (struct sockaddr *) &client_addr, &sock_len);
-    printf("Sockfd: %d\n", sock_fd);
-    printf("Error code: %d\n", client_sockfd);
-    // sending response back to client
-    // your code goes here
-    int count = send(client_sockfd, response, sizeof(response), 0);
+   fclose(fp);
+  int master_socket, accepted_socket, client_socket;
+  struct sockaddr_in server_addr, client_addr;
+  char buf[1024];
+  fd_set read_fd_set;
+  int maxfd, i;
+  int port = 9999;
+  int clients[MAXCLIENTS];
 
-    // terminating the connection
-    // your code goes here
-    status = close(sock_fd);
+  // initialize array of clients
+  for (i = 0; i < MAXCLIENTS; i++) {
+    clients[i] = -1;
+  }
 
-    // Fgets  a FTP command line from client via stream socket.
-    //
-    // If command  == "USER username"
-    //     1. Check if username against authorized users.
-    //     2. If username exists:
-    //         send "Username OK, password required" message to client.
-    //     3. If username does not exists
-    //         send "Username does not exist" to client
-    //
-    // if the command is "PASS password":
-    //     if the username is set
-    //         check of the password matches.
-    //         If password matches, send "Authentication complete"
-    //         if password doesnt match, send "wrong password"
-    //     if the username is not set
-    //         send "set USER first"
-    //
-    // if user has authenticated:
-    //     if the command is "PUT a file"
-    //         1. Create a file
-    //         2. Read the file from socket
-    //         3. Write to the file
-    //         4. Close the file.
-    //
-    //     if the command is "GET a file"
-    //         1. Open the file
-    //         2. If existed
-    //             2.1 Send "existed" to client
-    //             2.2 Read the file
-    //             2.3 Write the file to client
-    //             2.4 close the file
-    //         3. if noneixsted:
-    //             send "nonexisted" to client
-    //
-    //     if the command is "ls ..." or "pwd"
-    //         1. fp = popen(command, "r")
-    //         2. read the result from f
-    //         3. if no result from fp, reply "wrong command usage!" else reply
-    //         "Sucessfully executed!"
-    //         4. send the result to client
-    //
-    //     if the command is "cd directory..."
-    //         1. call chdirr(directory).
-    //         2. reply to the client if the command is Sucessfully executed.
-    //
-    // if the command is "QUIT"
-    //     1. close socket
-    //     2. exit
-    //
-    // if user has not authenticated yet:
-    //     Regardless of what you recieve
-    //         send "Authenticate first" message
+  master_socket = socket(AF_INET, SOCK_STREAM, 0);
+  if (master_socket < 0) {
+    printf("Can't open socket\n");
+    exit(1);
+  }
 
+  int reuse = 1;
+  setsockopt(master_socket, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(int));
 
+  server_addr.sin_family = AF_INET;
+  server_addr.sin_addr.s_addr = INADDR_ANY;
+  server_addr.sin_port = htons(port);
+
+  if (bind(master_socket, (struct sockaddr *) &server_addr, sizeof(server_addr))) {
+    close(master_socket);
+    printf("Can't bind socket\n");
+    exit(1);
+  }
+  
+  if (listen(master_socket, 5) < 0) {
+    close(master_socket);
+    printf("Can't listen on socket\n");
+    exit(1);
+  }
+
+  while (1) {
+
+    // clear the socket set
+    FD_ZERO(&read_fd_set);
+ 
+    // add master socket to file descriptor set
+    FD_SET(master_socket, &read_fd_set);
+    maxfd = master_socket;
+
+    // add child sockets to set
+    for (i = 0; i < MAXCLIENTS; i++) {
+        
+        // get socket descriptor
+        client_socket = clients[i];
+        
+        // if socket descriptor is valid, then add it to read list
+        if(client_socket > 0) {
+          FD_SET(client_socket, &read_fd_set);
+        }
+
+        // add highest file descriptor number to maxfd
+        if(client_socket > maxfd)
+            maxfd = client_socket;
+    }
+    
+    // wait for activity on one of the sockets
+    select(maxfd+1, &read_fd_set, NULL, NULL, NULL);
+    
+    // check for activity on the master_socket (if so, then it must be an incoming request)
+    if (FD_ISSET(master_socket, &read_fd_set)) {
+
+      // a client tries to connect
+      socklen_t len = sizeof(client_addr);
+      if ((accepted_socket = accept(master_socket, (struct sockaddr *)(&client_addr), &len)) < 0) {
+          printf("Can't accept connection\n");
+          exit(1);
+      }
+
+      printf("Accepted connection from %s:%d\n", inet_ntoa(client_addr.sin_addr), client_addr.sin_port);
+
+      // add new socket to array of clients
+      for (i = 0; i < MAXCLIENTS; i++) {
+          
+          // if position is empty, add it
+          if (clients[i] < 0) {
+              clients[i] = accepted_socket;
+              printf("[%d]Adding client to list of sockets with socket\n", i);
+              break;
+          }
+      }
+
+      // new client can not be added, close socket
+      if (i == MAXCLIENTS) {
+        printf("Too many connections\n");
+        close(accepted_socket);
+      }
+    }
+
+    // loop through all clients and check for activity on all client sockets
+    for (i = 0; i < MAXCLIENTS; i++) {
+
+      // skip it array position is not used
+      if (clients[i] < 0) {
+        continue;
+      }
+
+      // check for activity
+      if (FD_ISSET(clients[i], &read_fd_set)) {
+        
+        memset(buf, 0, sizeof(buf)); //reset the buffer
+        int num = recv(clients[i], buf, 1024, 0); // read from socket
+        
+        // client closed the connection
+        if (num == 0) {
+          printf("[%d]Closing connection\n", i);
+          close(clients[i]);
+          FD_CLR(clients[i], &read_fd_set); // clear the file descriptor set for client[i]
+          clients[i] = -1;
+        } else {
+          printf("[%d]Received: %s\n", i, buf);
+          send(clients[i], buf, num, 0); // echo the message back to client
+        }
+      }
+    }
+  }
 }
