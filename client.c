@@ -72,9 +72,9 @@ int main(int argc, char * argv[])
         printf("Server closed connection\n");
         exit(0);
       }
-      if (strcmp(buf, "USER placeholderSucess\n") == 0){
+      if (strcmp(buf, "Username OK, password required") == 0){
         printf("Username OK, password required\n");
-      } else if (strcmp(buf, "USER placeholderSucess2\n") == 0){
+      } else if (strcmp(buf, "Username does not exist") == 0){
         printf("Username does not exist\n");
       } else {
         printf("Incorrect response from server\n");
@@ -87,11 +87,11 @@ int main(int argc, char * argv[])
         printf("Server closed connection\n");
         exit(0);
       }
-      if (strcmp(buf, "PASS placeholderSucess\n") == 0){
+      if (strcmp(buf, "Authentication complete") == 0){
         printf("Authentication complete\n");
-      } else if (strcmp(buf, "PASS placeholderSucess2\n") == 0) {
+      } else if (strcmp(buf, "Wrong password") == 0) {
         printf("Wrong password\n");
-      } else if (strcmp(buf, "PASS placeholderSucess3\n") == 0){
+      } else if (strcmp(buf, "set USER first") == 0){
         printf("set USER first\n");
       } else {
         printf("Incorrect response from server\n");
