@@ -8,6 +8,7 @@
 #include <string.h>
 #include <sys/time.h>
 #include <sys/types.h>
+#include <fcntl.h>
 #include <unistd.h>
 
 int main(int argc, char * argv[])
@@ -24,7 +25,7 @@ int main(int argc, char * argv[])
   printf("Host address: %s\n", serverAddress);
   printf("Server port: %d\n", serverPort);
 
-  int sockfd, i;
+  int sockfd, sockfd2, i;
   struct sockaddr_in addr;
   char buf[1024];
 
@@ -47,6 +48,7 @@ int main(int argc, char * argv[])
     //Use inputLine to verify commands
     char inputLine[1024];
     char * command;
+    char * serverResponse;
 
     //Make sure input is not empty and has command
     while(1){
@@ -94,6 +96,68 @@ int main(int argc, char * argv[])
       } else {
         printf("Incorrect response from server\n");
       }
+    }
+
+    else if(strcmp(command, "PUT") == 0){
+
+      //Get the filename
+      char* file = strtok(NULL, " ");
+      if(file == NULL){
+        printf("Please enter file name after PUT\n");
+        continue;
+      }
+      //See if file can be opened.
+      int fp = open(file,O_RDONLY);
+      if(fp == -1){
+        printf("File %s could not be opened \n", file);
+        continue;
+      }
+
+      write(sockfd, "PUT a file",11);
+      if (read(sockfd, buf, 1024) == 0) {
+        printf("Server closed connection\n");
+        exit(0);
+      }
+
+      serverResponse = strtok(buf, "\n");
+      if(serverResponse == NULL){
+        printf("Malformed response from server \n");
+        continue;
+      }
+      serverResponse = strtok(serverResponse, " ");
+
+      if(strcmp(serverResponse, "PUTREADY") != 0){
+        printf("Server did not respond with PUTREADY \n");
+        continue;
+      }
+      serverResponse = strtok(NULL, " ");
+      if(serverResponse == NULL){
+        printf("Server did not provide port \n");
+        continue;
+      }
+      /*  Create new socket for file transfer*/
+      if ((sockfd2 = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+        printf("Can't open socket\n");
+        exit(1);
+      }
+      //Change the port of addr.
+      addr.sin_port = htons(atoi(serverResponse));
+      //Connect and be ready to transfer
+      if (connect(sockfd2, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+        printf("Can't connect to port given by server\n");
+        continue;
+      }
+
+      char* line = (char*)malloc(1024);
+      int bytes_read = 0;
+      do{
+        bytes_read = read(fp, line, 1024);
+        write(sockfd2, line, bytes_read);
+      } while(bytes_read != 0);
+      
+      free(line);
+      close(fp);
+
     }
 
     else if(strcmp(command, "!PWD") == 0){
