@@ -96,6 +96,39 @@ int main(int argc, char * argv[])
       }
     }
 
+    else if(strcmp(command, "!PWD") == 0){
+      char wd[1024];
+      getcwd(wd, 1024);
+      printf("%s\n",wd);
+    }
+
+    else if(strcmp(command, "!LS") == 0){
+      //Get the arguments
+      char* args = strtok(NULL, " ");
+      //Fork and call LS with our arguments
+      int LSstatus;
+      if(fork() == 0){
+        char* argv[2];
+        argv[0] = "/bin/ls";
+        argv[1] = args;
+        execv(argv[0], argv);
+      } else {
+        //Wait for LS to finish printing
+        wait(&LSstatus);
+      }
+    }
+    else if(strcmp(command, "!CD") == 0){
+      //Get the arguments
+      char* args = strtok(NULL, " ");
+      if(args == NULL){
+        continue;
+      }
+      //Change the directory
+      if(chdir(args) == -1){
+        printf("qksh: %s: error changing directory\n", args);
+      }
+    }
+
     else if(strcmp(command, "QUIT") == 0){
       printf("Shutting down...\n");
 
