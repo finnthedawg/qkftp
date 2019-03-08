@@ -287,7 +287,7 @@ int main(int argc, char * argv[])
                   free(line);
                   close(client_data_socket);
                   close(fp);
-                  return;
+                  return 0;
                 }
                 //printf("I AM PARENT\n");
               }
