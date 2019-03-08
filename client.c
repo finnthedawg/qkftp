@@ -8,6 +8,7 @@
 #include <string.h>
 #include <sys/time.h>
 #include <sys/types.h>
+#include <sys/wait.h>
 #include <fcntl.h>
 #include <unistd.h>
 
@@ -113,7 +114,7 @@ int main(int argc, char * argv[])
         continue;
       }
       char buf[1000];
-      memset(&buf, 0, sizeof(buf)); // zero out the buffer    
+      memset(&buf, 0, sizeof(buf)); // zero out the buffer
       sprintf(buf, "PUT %s", file);
       write(sockfd, buf, strlen(buf) + 1);
       if (read(sockfd, buf, 1024) == 0) {
@@ -220,7 +221,7 @@ int main(int argc, char * argv[])
         printf("File %s could not be opened for writing \n", file);
         continue;
       }
-      
+
 
       char* line = (char*)malloc(1024);
       int bytes_read = 0;
