@@ -12,10 +12,19 @@
 
 
 #define MAXCLIENTS 30
+#define MAXUSERS 100
 
 struct user{
     char name[30];
     char password[30];
+};
+
+struct client
+{
+  int fd;
+  int user_id;
+  int is_authenticated;
+  char directory[100];
 };
 
 int main(int argc, char * argv[])
@@ -37,8 +46,6 @@ int main(int argc, char * argv[])
    struct user* users = (struct user*)malloc(sizeof(struct user)*nuser);
    int ind = 0;
     while ((read = getline(&line, &len, fp)) != -1) {
-        printf("Retrieved line of length %zu:\n", read);
-        printf("%s", line);
           char * pch;
           pch = strtok(line," ");
           int cnt = 0;
@@ -48,6 +55,7 @@ int main(int argc, char * argv[])
             pch = strtok (NULL, " ");
             cnt++;
           }
+          ind++;
     }
    fclose(fp);
   int master_socket, accepted_socket, client_socket;
@@ -56,11 +64,13 @@ int main(int argc, char * argv[])
   fd_set read_fd_set;
   int maxfd, i;
   int port = 9999;
-  int clients[MAXCLIENTS];
 
   // initialize array of clients
+  struct client* clients = (struct client*)malloc(sizeof(struct client)*100);
   for (i = 0; i < MAXCLIENTS; i++) {
-    clients[i] = -1;
+    clients[i].fd = -1;
+    clients[i].user_id = -1;
+    clients[i].is_authenticated=0;
   }
 
   master_socket = socket(AF_INET, SOCK_STREAM, 0);
@@ -101,7 +111,7 @@ int main(int argc, char * argv[])
     for (i = 0; i < MAXCLIENTS; i++) {
 
         // get socket descriptor
-        client_socket = clients[i];
+        client_socket = clients[i].fd;
 
         // if socket descriptor is valid, then add it to read list
         if(client_socket > 0) {
@@ -132,8 +142,8 @@ int main(int argc, char * argv[])
       for (i = 0; i < MAXCLIENTS; i++) {
 
           // if position is empty, add it
-          if (clients[i] < 0) {
-              clients[i] = accepted_socket;
+          if (clients[i].fd < 0) {
+              clients[i].fd = accepted_socket;
               printf("[%d]Adding client to list of sockets with socket\n", i);
               break;
           }
@@ -150,25 +160,80 @@ int main(int argc, char * argv[])
     for (i = 0; i < MAXCLIENTS; i++) {
 
       // skip it array position is not used
-      if (clients[i] < 0) {
+      if (clients[i].fd < 0) {
         continue;
       }
 
       // check for activity
-      if (FD_ISSET(clients[i], &read_fd_set)) {
+      if (FD_ISSET(clients[i].fd, &read_fd_set)) {
 
         memset(buf, 0, sizeof(buf)); //reset the buffer
-        int num = recv(clients[i], buf, 1024, 0); // read from socket
+        int num = recv(clients[i].fd, buf, 1024, 0); // read from socket
 
         // client closed the connection
         if (num == 0) {
-          printf("[%d]Closing connection\n", i);
-          close(clients[i]);
-          FD_CLR(clients[i], &read_fd_set); // clear the file descriptor set for client[i]
-          clients[i] = -1;
+          printf("[%d]Closing connection for a client\n", i);
+          close(clients[i].fd);
+          FD_CLR(clients[i].fd, &read_fd_set); // clear the file descriptor set for client[i]
+          clients[i].fd = -1;
         } else {
           printf("[%d]Received: %s\n", i, buf);
-          send(clients[i], buf, num, 0); // echo the message back to client
+          char * pch;
+          pch = strtok(buf," ");
+          int cnt = 0;
+          char cmd[10];
+          char argument[100];
+          while (pch != NULL){
+            if (cnt == 0) strcpy(cmd, pch);
+            else strcpy(argument, pch);
+            pch = strtok (NULL, " ");
+            cnt++;
+          }
+          if (strcmp (cmd,"USER") == 0){
+            int ii=0;
+            int ind = -1;
+            for (ii=0;ii<nuser;ii++){
+                if (strcmp(users[ii].name,argument)==0){
+                    ind = ii;
+                    break;
+                }
+            }
+            if (ind == -1){
+                char message[] = "Username does not exist";
+                write(clients[i].fd,message,strlen(message)+1);
+            }
+            else {
+                char message[] = "Username OK, password required";
+                clients[i].user_id=ind;
+                write(clients[i].fd,message,strlen(message)+1);
+            }
+          }
+          else if (strcmp (cmd,"PASS") == 0){
+          
+            if(clients[i].user_id!=-1){
+          
+              if (strncmp(users[clients[i].user_id].password,argument,strlen(argument))==0){
+                char message1[] = "Authentication complete";
+                clients[i].is_authenticated=1;
+                write(clients[i].fd,message1,strlen(message1)+1);
+              }
+              else {
+                char message1[] = "Wrong password";
+                clients[i].is_authenticated=1;
+                write(clients[i].fd,message1,strlen(message1)+1);
+              }
+            }
+            else {
+              char message1[] = "set USER first";
+              write(clients[i].fd,message1,strlen(message1)+1);
+            }
+          }
+          else if (strcmp (cmd,"QUIT") == 0){
+              printf("[%d]Closing connection for a client\n", i);
+              close(clients[i].fd);
+              FD_CLR(clients[i].fd, &read_fd_set); // clear the file descriptor set for client[i]
+              clients[i].fd = -1;
+          }
         }
       }
     }
