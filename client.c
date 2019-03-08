@@ -237,6 +237,7 @@ int main(int argc, char * argv[])
     else if(strcmp(command, "!PWD") == 0){
       char wd[1024];
       getcwd(wd, 1024);
+      printf("%s\n", wd);
     }
 
     else if(strcmp(command, "!LS") == 0){
@@ -265,6 +266,35 @@ int main(int argc, char * argv[])
         printf("qksh: %s: error changing directory\n", args);
       }
     }
+
+    else if(strcmp(command, "PWD") == 0){
+      write(sockfd, buf, strlen(buf+1));
+
+      if (read(sockfd, buf, 1024) == 0) {
+        printf("Server closed connection\n");
+        exit(0);
+      }
+
+      serverResponse = strtok(buf, "\n");
+
+      if(serverResponse == NULL){
+        printf("Malformed response from server \n");
+        continue;
+      }
+
+      serverResponse = strtok(serverResponse, " ");
+      if(strcmp(serverResponse, "SUCESS") != 0){
+        printf("Error executing PWD on server \n");
+        continue;
+      }
+      serverResponse = strtok(NULL, " ");
+      if(serverResponse == NULL){
+        printf("Server did not provide port \n");
+        continue;
+      }
+      printf("%s\n", serverResponse);
+    }
+
 
     else if(strcmp(command, "QUIT") == 0){
       printf("Shutting down...\n");
