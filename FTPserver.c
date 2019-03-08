@@ -9,6 +9,7 @@
 #include <unistd.h>
 #include <signal.h>
 #include <string.h>
+#include <fcntl.h>
 
 
 #define MAXCLIENTS 30
@@ -32,7 +33,7 @@ int main(int argc, char * argv[])
    FILE *fp;
    char * line = NULL;
     size_t len = 0;
-    ssize_t read;
+    ssize_t read_bytes;
 
 
    fp = fopen("users.txt", "r"); // read mode
@@ -41,11 +42,11 @@ int main(int argc, char * argv[])
       perror("Error while opening the file.\n");
       exit(EXIT_FAILURE);
    }
-   read = getline(&line, &len, fp);
+   read_bytes = getline(&line, &len, fp);
    int nuser = atoi(line);
    struct user* users = (struct user*)malloc(sizeof(struct user)*nuser);
    int ind = 0;
-    while ((read = getline(&line, &len, fp)) != -1) {
+    while ((read_bytes = getline(&line, &len, fp)) != -1) {
           char * pch;
           pch = strtok(line," ");
           int cnt = 0;
@@ -64,6 +65,7 @@ int main(int argc, char * argv[])
   fd_set read_fd_set;
   int maxfd, i;
   int port = 9999;
+  int start_port = 9930;
 
   // initialize array of clients
   struct client* clients = (struct client*)malloc(sizeof(struct client)*100);
@@ -71,6 +73,7 @@ int main(int argc, char * argv[])
     clients[i].fd = -1;
     clients[i].user_id = -1;
     clients[i].is_authenticated=0;
+    getcwd(clients[i].directory, 100);
   }
 
   master_socket = socket(AF_INET, SOCK_STREAM, 0);
@@ -227,6 +230,80 @@ int main(int argc, char * argv[])
               char message1[] = "set USER first";
               write(clients[i].fd,message1,strlen(message1)+1);
             }
+          }
+          if (clients[i].is_authenticated==1){
+              if (strcmp (cmd,"PUT") == 0){
+                int port = start_port + i;
+                printf("HERE\n");
+                if (fork() == 0){
+                  char dir[1000];
+                  memset(&dir, 0, sizeof(dir)); // zero out the buffer    
+                  sprintf(dir, "%s/%s", clients[i].directory, argument);
+                  printf("DIR:%s\n", dir);
+                  int fp = open(dir,O_CREAT|O_WRONLY, 0666);
+                  int data_socket = socket(AF_INET, SOCK_STREAM, 0);
+                  if (data_socket < 0) {
+                    printf("Can't open socket\n");
+                    exit(1);
+                  }
+                  printf("FILE CREATED\n");
+                  int reuse = 1;
+                  setsockopt(data_socket, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(int));
+                  struct sockaddr_in client_addr, data_server_addr;
+                  data_server_addr.sin_family = AF_INET;
+                  data_server_addr.sin_addr.s_addr = INADDR_ANY;
+                  data_server_addr.sin_port = htons(port);
+                  if (bind(data_socket, (struct sockaddr *) &data_server_addr, sizeof(data_server_addr))) {
+                    close(data_socket);
+                    printf("Can't bind socket\n");
+                    exit(1);
+                  }
+
+                  if (listen(data_socket, 5) < 0) {
+                    close(data_socket);
+                    printf("Can't listen on socket\n");
+                    exit(1);
+                  }
+                  char mess[30];
+                  memset(&mess, 0, sizeof(mess)); // zero out the buffer    
+                  sprintf(mess, "PUTREADY %d", port);
+                  write(clients[i].fd, mess, strlen(mess)+1);
+                  socklen_t len = sizeof(client_addr);
+                  int client_data_socket;
+                  if ((client_data_socket = accept(data_socket, (struct sockaddr *)(&client_addr), &len)) < 0) {
+                      printf("Can't accept connection\n");
+                      exit(1);
+                  }
+                  int bytes_read = 0;
+                  char* line = (char*)malloc(1024);
+                  printf("%d\n", client_data_socket);
+                  printf("START READING\n");
+                  do{
+                    bytes_read = read(client_data_socket, line, 1024);
+                    printf("READ %d bytes: %s\n", bytes_read, line);
+                    write(fp, line, bytes_read);
+                  } while(bytes_read != 0);
+                  printf("WHILE LOOP DONE\n");
+                  free(line);
+                  close(client_data_socket);
+                  close(fp);
+                  return;
+                }
+                //printf("I AM PARENT\n");
+              }
+              else if (strcmp (cmd,"GET") == 0){
+
+              }
+              else if (strcmp (cmd,"ls") == 0){
+
+              }
+              else if (strcmp (cmd,"pwd") == 0){
+
+              }
+              else if (strcmp (cmd,"cd directory") == 0){
+
+              }
+
           }
           else if (strcmp (cmd,"QUIT") == 0){
               printf("[%d]Closing connection for a client\n", i);

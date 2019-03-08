@@ -112,8 +112,10 @@ int main(int argc, char * argv[])
         printf("File %s could not be opened \n", file);
         continue;
       }
-
-      write(sockfd, "PUT a file",11);
+      char buf[1000];
+      memset(&buf, 0, sizeof(buf)); // zero out the buffer    
+      sprintf(buf, "PUT %s", file);
+      write(sockfd, buf, strlen(buf) + 1);
       if (read(sockfd, buf, 1024) == 0) {
         printf("Server closed connection\n");
         exit(0);
@@ -150,6 +152,7 @@ int main(int argc, char * argv[])
 
       char* line = (char*)malloc(1024);
       int bytes_read = 0;
+      printf("clinet statt readifbn\n");
       do{
         bytes_read = read(fp, line, 1024);
         write(sockfd2, line, bytes_read);
@@ -157,13 +160,12 @@ int main(int argc, char * argv[])
       
       free(line);
       close(fp);
-
+      close(sockfd2);
     }
 
     else if(strcmp(command, "!PWD") == 0){
       char wd[1024];
       getcwd(wd, 1024);
-      printf("%s\n",wd);
     }
 
     else if(strcmp(command, "!LS") == 0){
