@@ -157,10 +157,80 @@ int main(int argc, char * argv[])
         bytes_read = read(fp, line, 1024);
         write(sockfd2, line, bytes_read);
       } while(bytes_read != 0);
-      
+
       free(line);
       close(fp);
       close(sockfd2);
+    }
+
+    else if(strcmp(command, "GET") == 0){
+      //Get the filename
+      char* file = strtok(NULL, " ");
+      if(file == NULL){
+        printf("Please enter file name after GET\n");
+        continue;
+      }
+
+      write(sockfd, buf, strlen(buf+1));
+      if (read(sockfd, buf, 1024) == 0) {
+        printf("Server closed connection\n");
+
+        exit(0);
+      }
+
+      serverResponse = strtok(buf, "\n");
+      if(serverResponse == NULL){
+        printf("Malformed response from server \n");
+        continue;
+      }
+      serverResponse = strtok(serverResponse, " ");
+
+      if(strcmp(serverResponse, "GETREADY") != 0){
+        printf("Server did not respond with GETREADY \n");
+        continue;
+      }
+      serverResponse = strtok(NULL, " ");
+      if(serverResponse == NULL){
+        printf("Server did not provide port \n");
+        continue;
+      }
+      /*  Create new socket for file transfer*/
+      if ((sockfd2 = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+        printf("Can't open socket\n");
+        exit(1);
+      }
+      //Change the port of addr.
+      addr.sin_port = htons(atoi(serverResponse));
+      //Connect and be ready to transfer
+      if (connect(sockfd2, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+        printf("Can't connect to port given by server\n");
+        continue;
+      }
+
+      //See if file can be created
+      int fp = open(file,O_CREAT, 0666);
+      if(fp == -1){
+        printf("File %s could not be created \n", file);
+        continue;
+      }
+      close(fp);
+      //See if file can be opened
+      fp = open(file,O_WRONLY, 0666);
+      if(fp == -1){
+        printf("File %s could not be opened for writing \n", file);
+        continue;
+      }
+      
+
+      char* line = (char*)malloc(1024);
+      int bytes_read = 0;
+      do{
+        bytes_read = read(sockfd2, line, 1024);
+        write(fp, line, bytes_read);
+      } while(bytes_read != 0);
+      close(fp);
+      close(sockfd2);
+
     }
 
     else if(strcmp(command, "!PWD") == 0){
