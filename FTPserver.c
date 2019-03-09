@@ -105,7 +105,7 @@ int main(int argc, char * argv[])
 
     // clear the socket set
     FD_ZERO(&read_fd_set);
- 
+
     // add master socket to file descriptor set
     FD_SET(master_socket, &read_fd_set);
     maxfd = master_socket;
@@ -212,9 +212,9 @@ int main(int argc, char * argv[])
             }
           }
           else if (strcmp (cmd,"PASS") == 0){
-          
+
             if(clients[i].user_id!=-1){
-          
+
               if (strncmp(users[clients[i].user_id].password,argument,strlen(argument))==0){
                 char message1[] = "Authentication complete";
                 clients[i].is_authenticated=1;
@@ -236,7 +236,7 @@ int main(int argc, char * argv[])
                 int port = start_port + i;
                 if (fork() == 0){
                   char dir[1000];
-                  memset(&dir, 0, sizeof(dir)); // zero out the buffer    
+                  memset(&dir, 0, sizeof(dir)); // zero out the buffer
                   sprintf(dir, "%s/%s", clients[i].directory, argument);
                   int fp = open(dir,O_CREAT|O_WRONLY, 0666);
                   int data_socket = socket(AF_INET, SOCK_STREAM, 0);
@@ -262,7 +262,7 @@ int main(int argc, char * argv[])
                     exit(1);
                   }
                   char mess[30];
-                  memset(&mess, 0, sizeof(mess)); // zero out the buffer    
+                  memset(&mess, 0, sizeof(mess)); // zero out the buffer
                   sprintf(mess, "PUTREADY %d", port);
                   write(clients[i].fd, mess, strlen(mess)+1);
                   socklen_t len = sizeof(client_addr);
@@ -287,7 +287,7 @@ int main(int argc, char * argv[])
                 int port = start_port + i;
                 if (fork() == 0){
                   char dir[1000];
-                  memset(&dir, 0, sizeof(dir)); // zero out the buffer    
+                  memset(&dir, 0, sizeof(dir)); // zero out the buffer
                   sprintf(dir, "%s/%s", clients[i].directory, argument);
                   int fp = open(dir,O_RDONLY, 0666);
                   int data_socket = socket(AF_INET, SOCK_STREAM, 0);
@@ -313,7 +313,7 @@ int main(int argc, char * argv[])
                     exit(1);
                   }
                   char mess[30];
-                  memset(&mess, 0, sizeof(mess)); // zero out the buffer    
+                  memset(&mess, 0, sizeof(mess)); // zero out the buffer
                   sprintf(mess, "GETREADY %d", port);
                   write(clients[i].fd, mess, strlen(mess)+1);
                   socklen_t len = sizeof(client_addr);
@@ -337,42 +337,41 @@ int main(int argc, char * argv[])
               else if (strcmp (cmd,"LS") == 0){
                 if (fork() == 0){
                   char command[1000];
-                  memset(&command, 0, sizeof(command)); // zero out the buffer 
-                  sprintf(command, "ls %s", clients[i].directory);
-                  //printf("%s\n", command);   
+                  memset(command, 0, sizeof(command)); // zero out the buffer
+                  sprintf(command, "ls '%s'", clients[i].directory);
+                  //printf("%s\n", command);
                   FILE* fp = popen(command, "r");
                   if (fp == NULL){
                     char mess[1000];
-                    memset(&mess, 0, sizeof(mess)); // zero out the buffer    
+                    memset(&mess, 0, sizeof(mess)); // zero out the buffer
                     sprintf(mess, "SUCCESS FAIL\n");
                     write(clients[i].fd, mess,strlen(mess+1));
                     continue;
                   }
 
                   char mess[1000];
-                  memset(&mess, 0, sizeof(mess)); // zero out the buffer    
-                  sprintf(mess, "SUCCESS\n");
+                  memset(mess, 0, sizeof(mess)); // zero out the buffer
+                  sprintf(mess, "SUCCESS");
                   //printf("%s\n", mess);
-                  write(clients[i].fd, mess,strlen(mess+1));
-                  int read_bytes = 0;
+                  write(clients[i].fd, mess,strlen(mess));
                   char* line = (char*)malloc(1024);
                   do{
-                    read_bytes = fgets(line, 1024, fp);
-                    printf("\n");
-                    //printf("LINE %s\n", line);
-                    if (read_bytes == 0) break;
-                    write(clients[i].fd, line, strlen(line)+1);
+                    if (feof(fp)) break;
+                    memset(line, 0 , 1024);
+                    fgets(line, 1024, fp);
+                    write(clients[i].fd, line, strlen(line));
                   } while (1);
+
                   write(clients[i].fd, "\r\n\0", 3);
                   free(line);
-                  close(fp);
+                  fclose(fp);
                   //printf("%s\n", "We are done");
-                  return;
+                  return 0;
                 }
               }
               else if (strcmp (cmd,"PWD") == 0){
                 char mess[1000];
-                memset(&mess, 0, sizeof(mess)); // zero out the buffer    
+                memset(&mess, 0, sizeof(mess)); // zero out the buffer
                 sprintf(mess, "SUCCESS %s\n", clients[i].directory);
                 //printf("%s\n", mess);
                 write(clients[i].fd, mess,strlen(mess+1));
@@ -380,7 +379,7 @@ int main(int argc, char * argv[])
               else if (strcmp (cmd,"CD") == 0){
                 if(chdir(clients[i].directory) == -1){
                   char mess[1000];
-                  memset(&mess, 0, sizeof(mess)); // zero out the buffer    
+                  memset(&mess, 0, sizeof(mess)); // zero out the buffer
                   sprintf(mess, "SUCCESS FAIL\n");
                   //printf("%s\n", "SF1");
                   write(clients[i].fd, mess,strlen(mess+1));
@@ -388,13 +387,13 @@ int main(int argc, char * argv[])
                 } else{
                   if (chdir(argument) == -1){
                     char mess[1000];
-                    memset(&mess, 0, sizeof(mess)); // zero out the buffer    
+                    memset(&mess, 0, sizeof(mess)); // zero out the buffer
                     sprintf(mess, "SUCCESS FAIL\n");
                     //printf("%s\n", "SF2");
                     write(clients[i].fd, mess,strlen(mess+1));
                   } else{
                     char mess[1000];
-                    memset(&mess, 0, sizeof(mess)); // zero out the buffer    
+                    memset(&mess, 0, sizeof(mess)); // zero out the buffer
                     sprintf(mess, "SUCCESS\n");
                     //printf("%s\n", mess);
                     write(clients[i].fd, mess,strlen(mess+1));
