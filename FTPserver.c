@@ -191,6 +191,7 @@ int main(int argc, char * argv[]){
             if (ind == -1){
                 char message[] = "Username does not exist";
                 write(clients[i].fd,message,strlen(message)+1);
+                continue;
             }
             // if username exists, ask for password
             else {
