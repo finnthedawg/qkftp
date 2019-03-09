@@ -320,17 +320,18 @@ int main(int argc, char * argv[])
         printf("Malformed response from server \n");
         continue;
       }
-      serverResponse = strtok(serverResponse, " ");
       if(strcmp(serverResponse, "SUCCESS") != 0){
         printf("Error executing LS on server \n");
         continue;
       }
-      serverResponse = strtok(NULL, " ");
-      if(serverResponse == NULL){
-        printf("Command executed \n");
-        continue;
-      }
-      printf("%s\n", serverResponse);
+      //Begin recieving LS from server.
+      char* line = (char*)malloc(1024);
+      int bytes_read = 0;
+      do{
+        bytes_read = read(sockfd, line, 1024);
+        printf("%s",line);
+      } while(bytes_read != 0);
+
     }
 
     else if(strcmp(command, "QUIT") == 0){
