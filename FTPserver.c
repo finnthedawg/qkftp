@@ -198,6 +198,7 @@ int main(int argc, char * argv[]){
                 char message[] = "Username OK, password required";
                 clients[i].user_id=ind;
                 write(clients[i].fd,message,strlen(message)+1);
+                continue;
             }
           }
           //if command is 'PASS password'
@@ -281,7 +282,7 @@ int main(int argc, char * argv[]){
                 }
               }
               else if (strcmp (cmd,"GET") == 0){
-                // all procedures are similar to PUT 
+                // all procedures are similar to PUT
                 int port = start_port + i;
                 if (fork() == 0){
                   char dir[1000];
