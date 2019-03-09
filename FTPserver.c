@@ -335,25 +335,28 @@ int main(int argc, char * argv[])
                 }
               }
               else if (strcmp (cmd,"LS") == 0){
-                
-                char* args = strtok(NULL, " ");
-                //Fork and call LS with our arguments
-                int LSstatus;
-                if(fork() == 0){
-                  char* argv[2];
-                  argv[0] = "/bin/ls";
-                  argv[1] = args;
-                  execv(argv[0], argv);
-                } else {
-                  //Wait for LS to finish printing
-                  wait(&LSstatus);
+                char command[1000];
+                memset(&command, 0, sizeof(command)); // zero out the buffer    
+                sprintf(command, "ls %s", clients[i].directory);
+                FILE* fp = popen(command, "r");
+                if (fp == NULL){
+                  char mess[1000];
+                  memset(&mess, 0, sizeof(mess)); // zero out the buffer    
+                  sprintf(mess, "SUCCESS FAIL");
+                  write(clients[i].fd, mess,strlen(mess+1));
                 }
-
+                int read_bytes = 0;
+                char* line = (char*)malloc(1024);
+                do{
+                  read_bytes = read(fp, line, 1024);
+                  write(clients[i].fd, line, read_bytes);
+                } while (read_bytes!=0);
               }
               else if (strcmp (cmd,"PWD") == 0){
                 char mess[1000];
                 memset(&mess, 0, sizeof(mess)); // zero out the buffer    
                 sprintf(mess, "SUCCESS %s", clients[i].directory);
+                printf("%s\n", clients[i].directory);
                 write(clients[i].fd, mess,strlen(mess+1));
               }
               else if (strcmp (cmd,"CD") == 0){
@@ -361,6 +364,7 @@ int main(int argc, char * argv[])
                   char mess[1000];
                   memset(&mess, 0, sizeof(mess)); // zero out the buffer    
                   sprintf(mess, "SUCCESS FAIL");
+                  printf("%s\n", "SF1");
                   write(clients[i].fd, mess,strlen(mess+1));
 
                 } else{
@@ -368,11 +372,13 @@ int main(int argc, char * argv[])
                     char mess[1000];
                     memset(&mess, 0, sizeof(mess)); // zero out the buffer    
                     sprintf(mess, "SUCCESS FAIL");
+                    printf("%s\n", "SF2");
                     write(clients[i].fd, mess,strlen(mess+1));
                   } else{
                     char mess[1000];
                     memset(&mess, 0, sizeof(mess)); // zero out the buffer    
                     sprintf(mess, "SUCCESS");
+                    printf("%s\n", mess);
                     write(clients[i].fd, mess,strlen(mess+1));
 
                     getcwd(clients[i].directory, 1024);
