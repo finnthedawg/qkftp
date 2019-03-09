@@ -50,7 +50,6 @@ int main(int argc, char * argv[])
     char inputLine[1024];
     char * command;
     char * serverResponse;
-
     //Make sure input is not empty and has command
     while(1){
       printf("ftp >> ");
@@ -100,7 +99,6 @@ int main(int argc, char * argv[])
     }
 
     else if(strcmp(command, "PUT") == 0){
-
       //Get the filename
       char* file = strtok(NULL, " ");
       if(file == NULL){
@@ -207,7 +205,6 @@ int main(int argc, char * argv[])
         printf("Can't connect to port given by server\n");
         continue;
       }
-
       //See if file can be created
       int fp = open(file,O_CREAT, 0666);
       if(fp == -1){
@@ -221,8 +218,6 @@ int main(int argc, char * argv[])
         printf("File %s could not be opened for writing \n", file);
         continue;
       }
-
-
       char* line = (char*)malloc(1024);
       int bytes_read = 0;
       do{
@@ -231,12 +226,12 @@ int main(int argc, char * argv[])
       } while(bytes_read != 0);
       close(fp);
       close(sockfd2);
-
     }
 
     else if(strcmp(command, "!PWD") == 0){
       char wd[1024];
       getcwd(wd, 1024);
+      printf("%s\n", wd);
     }
 
     else if(strcmp(command, "!LS") == 0){
@@ -266,6 +261,78 @@ int main(int argc, char * argv[])
       }
     }
 
+    else if(strcmp(command, "PWD") == 0){
+      write(sockfd, buf, strlen(buf+1));
+      if (read(sockfd, buf, 1024) == 0) {
+        printf("Server closed connection\n");
+        exit(0);
+      }
+      serverResponse = strtok(buf, "\n");
+      if(serverResponse == NULL){
+        printf("Malformed response from server \n");
+        continue;
+      }
+      serverResponse = strtok(serverResponse, " ");
+      if(strcmp(serverResponse, "SUCCESS") != 0){
+        printf("Error executing PWD on server \n");
+        continue;
+      }
+      serverResponse = strtok(NULL, " ");
+      if(serverResponse == NULL){
+        printf("Command executed \n");
+        continue;
+      }
+      printf("%s\n", serverResponse);
+    }
+
+    else if(strcmp(command, "CD") == 0){
+      write(sockfd, buf, strlen(buf+1));
+      if (read(sockfd, buf, 1024) == 0) {
+        printf("Server closed connection\n");
+        exit(0);
+      }
+      serverResponse = strtok(buf, "\n");
+      if(serverResponse == NULL){
+        printf("Malformed response from server \n");
+        continue;
+      }
+      serverResponse = strtok(serverResponse, " ");
+      if(strcmp(serverResponse, "SUCCESS") != 0){
+        printf("Error executing CD on server \n");
+        continue;
+      }
+      serverResponse = strtok(NULL, " ");
+      if(serverResponse == NULL){
+        printf("Command executed \n");
+        continue;
+      }
+      printf("%s\n", serverResponse);
+    }
+
+    else if(strcmp(command, "LS") == 0){
+      write(sockfd, buf, strlen(buf+1));
+      if (read(sockfd, buf, 1024) == 0) {
+        printf("Server closed connection\n");
+        exit(0);
+      }
+      serverResponse = strtok(buf, "\n");
+      if(serverResponse == NULL){
+        printf("Malformed response from server \n");
+        continue;
+      }
+      serverResponse = strtok(serverResponse, " ");
+      if(strcmp(serverResponse, "SUCCESS") != 0){
+        printf("Error executing LS on server \n");
+        continue;
+      }
+      serverResponse = strtok(NULL, " ");
+      if(serverResponse == NULL){
+        printf("Command executed \n");
+        continue;
+      }
+      printf("%s\n", serverResponse);
+    }
+
     else if(strcmp(command, "QUIT") == 0){
       printf("Shutting down...\n");
 
@@ -276,9 +343,8 @@ int main(int argc, char * argv[])
       }
       return(0);
     }
-
     else {
-      printf("Incorrect input entered\n");
+      printf("Invalid FTP command entered\n");
     }
   }
 }
