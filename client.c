@@ -68,6 +68,7 @@ int main(int argc, char * argv[])
 
     if(strcmp(command, "USER") == 0){
       write(sockfd, buf, strlen(buf+1));
+      memset(buf, 0, strlen(buf));
       if (read(sockfd, buf, 1024) == 0) {
         printf("Server closed connection\n");
         exit(0);
@@ -83,6 +84,7 @@ int main(int argc, char * argv[])
 
     else if(strcmp(command, "PASS") == 0){
       write(sockfd, buf, strlen(buf+1));
+      memset(buf, 0, strlen(buf));
       if (read(sockfd, buf, 1024) == 0) {
         printf("Server closed connection\n");
         exit(0);
@@ -115,6 +117,7 @@ int main(int argc, char * argv[])
       memset(&buf, 0, sizeof(buf)); // zero out the buffer
       sprintf(buf, "PUT %s", file);
       write(sockfd, buf, strlen(buf) + 1);
+      memset(buf, 0, strlen(buf));
       if (read(sockfd, buf, 1024) == 0) {
         printf("Server closed connection\n");
         exit(0);
@@ -171,6 +174,7 @@ int main(int argc, char * argv[])
       }
 
       write(sockfd, buf, strlen(buf+1));
+      memset(buf, 0, strlen(buf));
       if (read(sockfd, buf, 1024) == 0) {
         printf("Server closed connection\n");
 
@@ -263,6 +267,7 @@ int main(int argc, char * argv[])
 
     else if(strcmp(command, "PWD") == 0){
       write(sockfd, buf, strlen(buf+1));
+      memset(buf, 0, strlen(buf));
       if (read(sockfd, buf, 1024) == 0) {
         printf("Server closed connection\n");
         exit(0);
@@ -287,6 +292,7 @@ int main(int argc, char * argv[])
 
     else if(strcmp(command, "CD") == 0){
       write(sockfd, buf, strlen(buf+1));
+      memset(buf, 0, strlen(buf));
       if (read(sockfd, buf, 1024) == 0) {
         printf("Server closed connection\n");
         exit(0);
@@ -311,6 +317,7 @@ int main(int argc, char * argv[])
 
     else if(strcmp(command, "LS") == 0){
       write(sockfd, buf, strlen(buf+1));
+      memset(buf, 0, strlen(buf));
       if (read(sockfd, buf, 1024) == 0) {
         printf("Server closed connection\n");
         exit(0);
