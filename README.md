@@ -135,5 +135,5 @@ To test the client and the server, you can use netcat. You can also simply run t
   * Result:
     ```
     ftp >> LS
-    Server requires you to be authenticated 
+    Server requires you to be authenticated
     ```

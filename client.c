@@ -14,7 +14,9 @@
 
 int main(int argc, char * argv[])
 {
+  //Server address
   char serverAddress[64];
+  //Server port which we get from flags
   int serverPort;
   if (argc != 3){
     printf("Please enter the host name and server port number\n");
@@ -25,21 +27,21 @@ int main(int argc, char * argv[])
   }
   printf("Host address: %s\n", serverAddress);
   printf("Server port: %d\n", serverPort);
-
+  //One socket for communication, one socket for file transfer.
   int sockfd, sockfd2, i;
   struct sockaddr_in addr;
-  char buf[1024];
-
+  char buf[1024]; //Buffer which we use to send and read.
+  //If socket could not be created with the provided server address.
   if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
     printf("Can't open socket\n");
     exit(1);
   }
-
+  //Set the socket details.
   memset(&addr, 0, sizeof(addr));
   addr.sin_family = AF_INET;
   addr.sin_port = htons(serverPort);
   inet_aton(serverAddress, &(addr.sin_addr));
-
+  //Socket could not be connected
   if (connect(sockfd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
     printf("Can't connect\n");
     exit(1);
@@ -65,8 +67,9 @@ int main(int argc, char * argv[])
       }
       break;
     }
-
+    //WE are sending username to server
     if(strcmp(command, "USER") == 0){
+      //Write this, and clear buffer for response
       write(sockfd, buf, strlen(buf+1));
       memset(buf, 0, strlen(buf));
       if (read(sockfd, buf, 1024) == 0) {
@@ -101,6 +104,7 @@ int main(int argc, char * argv[])
       }
     }
 
+    //We are uploading file to server.
     else if(strcmp(command, "PUT") == 0){
       //Get the filename
       char* file = strtok(NULL, " ");
@@ -116,9 +120,9 @@ int main(int argc, char * argv[])
       }
       char buf[1000];
       memset(&buf, 0, sizeof(buf)); // zero out the buffer
-      sprintf(buf, "PUT %s", file);
-      write(sockfd, buf, strlen(buf) + 1);
-      memset(buf, 0, strlen(buf));
+      sprintf(buf, "PUT %s", file); //Fill the buffer with our filename
+      write(sockfd, buf, strlen(buf) + 1); //Send this to server
+      memset(buf, 0, strlen(buf)); //Reset buf in preparation to recieve
       if (read(sockfd, buf, 1024) == 0) {
         printf("Server closed connection\n");
         exit(0);
@@ -155,7 +159,7 @@ int main(int argc, char * argv[])
         printf("Can't connect to port given by server\n");
         continue;
       }
-
+      //We create a line, and while we read files from the FP, we will keep writing.
       char* line = (char*)malloc(1024);
       int bytes_read = 0;
       do{
@@ -163,11 +167,13 @@ int main(int argc, char * argv[])
         write(sockfd2, line, bytes_read);
       } while(bytes_read != 0);
 
+      //Close the respective sockets
       free(line);
       close(fp);
       close(sockfd2);
     }
 
+    //Download a file from the server
     else if(strcmp(command, "GET") == 0){
       //Get the filename
       char* file = strtok(NULL, " ");
@@ -175,13 +181,12 @@ int main(int argc, char * argv[])
         printf("Please enter file name after GET\n");
         continue;
       }
-
+      //WRite the command and clear buffer for reading
       write(sockfd, buf, strlen(buf+1));
       memset(buf, 0, strlen(buf));
       if (read(sockfd, buf, 1024) == 0) {
         printf("Server closed connection\n");
-
-        exit(0);
+        exit(0); //Server closed the connection!!! How dare they.
       }
 
       serverResponse = strtok(buf, "\n");
@@ -203,7 +208,7 @@ int main(int argc, char * argv[])
         printf("Server did not provide port \n");
         continue;
       }
-      /*  Create new socket for file transfer*/
+      //We create a new socket for recieving files.
       if ((sockfd2 = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
         printf("Can't open socket\n");
         exit(1);
@@ -228,16 +233,19 @@ int main(int argc, char * argv[])
         printf("File %s could not be opened for writing \n", file);
         continue;
       }
+      //While the server is writing to us, we will read and write to file.
+      //Wait until server sends a close, which will be 0 bytes read.
       char* line = (char*)malloc(1024);
       int bytes_read = 0;
       do{
         bytes_read = read(sockfd2, line, 1024);
         write(fp, line, bytes_read);
       } while(bytes_read != 0);
-      close(fp);
+      close(fp); //Close the socket and the file pointer
       close(sockfd2);
     }
 
+    //Simply call getcwd to print the working directory.
     else if(strcmp(command, "!PWD") == 0){
       char wd[1024];
       getcwd(wd, 1024);
@@ -306,6 +314,7 @@ int main(int argc, char * argv[])
     }
 
     else if(strcmp(command, "CD") == 0){
+      //Write the command to server and reset buffer in prepration for response
       write(sockfd, buf, strlen(buf+1));
       char *buff = (char *)malloc(1024);
       memset(buff, 0, strlen(buff)+1);
@@ -335,7 +344,10 @@ int main(int argc, char * argv[])
       printf("%s\n", serverResponse);
     }
 
+    //Because LS can be long, we will tokenize the LS and recieve it one by one.
+    //Until a terminating sign.
     else if(strcmp(command, "LS") == 0){
+      //Send LS command and reset buffer in preparation for reading.
       write(sockfd, buf, strlen(buf+1));
       char *buff = (char *)malloc(1024);
       memset(buff, 0, strlen(buff)+1);
@@ -360,13 +372,14 @@ int main(int argc, char * argv[])
       char* line = (char*)malloc(1024);
       int bytes_read = 0;
       do{
-        memset(line, 0 , 1024);
+        memset(line, 0 , 1024); //Reset line in preparation for new read.
         bytes_read = read(sockfd, line, 1024);
-        printf("%s",line);
+        printf("%s",line); //We wait util we recieve terminating
       } while(bytes_read != 0 && strcmp(line,"\r\n") != 0);
 
     }
 
+    //Shuts down, and close our socket with the server.
     else if(strcmp(command, "QUIT") == 0){
       printf("Shutting down...\n");
 
@@ -377,6 +390,8 @@ int main(int argc, char * argv[])
       }
       return(0);
     }
+
+    //If no commands detected at this point, user probably entered a wrong command
     else {
       printf("Invalid FTP command entered\n");
     }
