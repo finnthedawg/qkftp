@@ -335,50 +335,68 @@ int main(int argc, char * argv[])
                 }
               }
               else if (strcmp (cmd,"LS") == 0){
-                char command[1000];
-                memset(&command, 0, sizeof(command)); // zero out the buffer    
-                sprintf(command, "ls %s", clients[i].directory);
-                FILE* fp = popen(command, "r");
-                if (fp == NULL){
+                if (fork() == 0){
+                  char command[1000];
+                  memset(&command, 0, sizeof(command)); // zero out the buffer 
+                  sprintf(command, "ls %s", clients[i].directory);
+                  //printf("%s\n", command);   
+                  FILE* fp = popen(command, "r");
+                  if (fp == NULL){
+                    char mess[1000];
+                    memset(&mess, 0, sizeof(mess)); // zero out the buffer    
+                    sprintf(mess, "SUCCESS FAIL\n");
+                    write(clients[i].fd, mess,strlen(mess+1));
+                    continue;
+                  }
+
                   char mess[1000];
                   memset(&mess, 0, sizeof(mess)); // zero out the buffer    
-                  sprintf(mess, "SUCCESS FAIL");
+                  sprintf(mess, "SUCCESS\n");
+                  //printf("%s\n", mess);
                   write(clients[i].fd, mess,strlen(mess+1));
+                  int read_bytes = 0;
+                  char* line = (char*)malloc(1024);
+                  do{
+                    read_bytes = fgets(line, 1024, fp);
+                    printf("\n");
+                    //printf("LINE %s\n", line);
+                    if (read_bytes == 0) break;
+                    write(clients[i].fd, line, strlen(line)+1);
+                  } while (1);
+                  write(clients[i].fd, "\r\n\0", 3);
+                  free(line);
+                  close(fp);
+                  //printf("%s\n", "We are done");
+                  return;
                 }
-                int read_bytes = 0;
-                char* line = (char*)malloc(1024);
-                do{
-                  read_bytes = read(fp, line, 1024);
-                  write(clients[i].fd, line, read_bytes);
-                } while (read_bytes!=0);
               }
               else if (strcmp (cmd,"PWD") == 0){
                 char mess[1000];
                 memset(&mess, 0, sizeof(mess)); // zero out the buffer    
-                sprintf(mess, "SUCCESS %s", clients[i].directory);
-                printf("%s\n", clients[i].directory);
+                sprintf(mess, "SUCCESS %s\n", clients[i].directory);
+                //printf("%s\n", mess);
                 write(clients[i].fd, mess,strlen(mess+1));
               }
               else if (strcmp (cmd,"CD") == 0){
                 if(chdir(clients[i].directory) == -1){
                   char mess[1000];
                   memset(&mess, 0, sizeof(mess)); // zero out the buffer    
-                  sprintf(mess, "SUCCESS FAIL");
-                  printf("%s\n", "SF1");
+                  sprintf(mess, "SUCCESS FAIL\n");
+                  //printf("%s\n", "SF1");
                   write(clients[i].fd, mess,strlen(mess+1));
 
                 } else{
                   if (chdir(argument) == -1){
                     char mess[1000];
                     memset(&mess, 0, sizeof(mess)); // zero out the buffer    
-                    sprintf(mess, "SUCCESS FAIL");
-                    printf("%s\n", "SF2");
+                    sprintf(mess, "SUCCESS FAIL\n");
+                    //printf("%s\n", "SF2");
                     write(clients[i].fd, mess,strlen(mess+1));
                   } else{
                     char mess[1000];
                     memset(&mess, 0, sizeof(mess)); // zero out the buffer    
-                    sprintf(mess, "SUCCESS");
-                    printf("%s\n", mess);
+                    sprintf(mess, "SUCCESS\n");
+                    //printf("%s\n", mess);
                     write(clients[i].fd, mess,strlen(mess+1));
 
                     getcwd(clients[i].directory, 1024);

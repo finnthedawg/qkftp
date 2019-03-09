@@ -154,7 +154,6 @@ int main(int argc, char * argv[])
 
       char* line = (char*)malloc(1024);
       int bytes_read = 0;
-      printf("clinet statt readifbn\n");
       do{
         bytes_read = read(fp, line, 1024);
         write(sockfd2, line, bytes_read);
@@ -266,38 +265,48 @@ int main(int argc, char * argv[])
     }
 
     else if(strcmp(command, "PWD") == 0){
+      //printf("-2%s\n", buf);
       write(sockfd, buf, strlen(buf+1));
-      memset(buf, 0, strlen(buf));
-      if (read(sockfd, buf, 1024) == 0) {
+      //printf("-1%s\n", buf);
+      char *buff = (char *)malloc(1024);
+      memset(buff, 0, strlen(buff)+1);
+      //printf("0%s\n", buff);
+      if (read(sockfd, buff, 1024) == 0) {
         printf("Server closed connection\n");
         exit(0);
       }
-      serverResponse = strtok(buf, "\n");
+      //printf("1%s\n", buff);
+      serverResponse = strtok(buff, "\n");
+      //printf("2%s\n", serverResponse);
       if(serverResponse == NULL){
         printf("Malformed response from server \n");
         continue;
       }
       serverResponse = strtok(serverResponse, " ");
+      //printf("3%s\n", serverResponse);
       if(strcmp(serverResponse, "SUCCESS") != 0){
         printf("Error executing PWD on server \n");
         continue;
       }
       serverResponse = strtok(NULL, " ");
+      //printf("4%s\n", serverResponse);
       if(serverResponse == NULL){
         printf("Command executed \n");
         continue;
       }
       printf("%s\n", serverResponse);
+      free(buff);
     }
 
     else if(strcmp(command, "CD") == 0){
       write(sockfd, buf, strlen(buf+1));
-      memset(buf, 0, strlen(buf));
-      if (read(sockfd, buf, 1024) == 0) {
+      char *buff = (char *)malloc(1024);
+      memset(buff, 0, strlen(buff)+1);
+      if (read(sockfd, buff, 1024) == 0) {
         printf("Server closed connection\n");
         exit(0);
       }
-      serverResponse = strtok(buf, "\n");
+      serverResponse = strtok(buff, "\n");
       if(serverResponse == NULL){
         printf("Malformed response from server \n");
         continue;
@@ -317,12 +326,13 @@ int main(int argc, char * argv[])
 
     else if(strcmp(command, "LS") == 0){
       write(sockfd, buf, strlen(buf+1));
-      memset(buf, 0, strlen(buf));
-      if (read(sockfd, buf, 1024) == 0) {
+      char *buff = (char *)malloc(1024);
+      memset(buff, 0, strlen(buff)+1);
+      if (read(sockfd, buff, 1024) == 0) {
         printf("Server closed connection\n");
         exit(0);
       }
-      serverResponse = strtok(buf, "\n");
+      serverResponse = strtok(buff, "\n");
       if(serverResponse == NULL){
         printf("Malformed response from server \n");
         continue;
@@ -337,7 +347,7 @@ int main(int argc, char * argv[])
       do{
         bytes_read = read(sockfd, line, 1024);
         printf("%s",line);
-      } while(bytes_read != 0);
+      } while(bytes_read != 0 && strcmp(line,"\r\n") != 0);
 
     }
 
