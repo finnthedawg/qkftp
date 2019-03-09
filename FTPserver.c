@@ -334,16 +334,51 @@ int main(int argc, char * argv[])
                   return 0;
                 }
               }
-              else if (strcmp (cmd,"ls") == 0){
+              else if (strcmp (cmd,"LS") == 0){
+                
+                char* args = strtok(NULL, " ");
+                //Fork and call LS with our arguments
+                int LSstatus;
+                if(fork() == 0){
+                  char* argv[2];
+                  argv[0] = "/bin/ls";
+                  argv[1] = args;
+                  execv(argv[0], argv);
+                } else {
+                  //Wait for LS to finish printing
+                  wait(&LSstatus);
+                }
 
               }
-              else if (strcmp (cmd,"pwd") == 0){
-
+              else if (strcmp (cmd,"PWD") == 0){
+                char mess[1000];
+                memset(&mess, 0, sizeof(mess)); // zero out the buffer    
+                sprintf(mess, "SUCCESS %s", clients[i].directory);
+                write(clients[i].fd, mess,strlen(mess+1));
               }
-              else if (strcmp (cmd,"cd directory") == 0){
+              else if (strcmp (cmd,"CD") == 0){
+                if(chdir(clients[i].directory) == -1){
+                  char mess[1000];
+                  memset(&mess, 0, sizeof(mess)); // zero out the buffer    
+                  sprintf(mess, "SUCCESS FAIL");
+                  write(clients[i].fd, mess,strlen(mess+1));
 
+                } else{
+                  if (chdir(argument) == -1){
+                    char mess[1000];
+                    memset(&mess, 0, sizeof(mess)); // zero out the buffer    
+                    sprintf(mess, "SUCCESS FAIL");
+                    write(clients[i].fd, mess,strlen(mess+1));
+                  } else{
+                    char mess[1000];
+                    memset(&mess, 0, sizeof(mess)); // zero out the buffer    
+                    sprintf(mess, "SUCCESS");
+                    write(clients[i].fd, mess,strlen(mess+1));
+
+                    getcwd(clients[i].directory, 1024);
+                  }
+                }
               }
-
           }
           else if (strcmp (cmd,"QUIT") == 0){
               printf("[%d]Closing connection for a client\n", i);
