@@ -224,14 +224,17 @@ int main(int argc, char * argv[]){
               write(clients[i].fd,message1,strlen(message1)+1);
             }
           }
+          //if user is authenticated
           if (clients[i].is_authenticated==1){
               if (strcmp (cmd,"PUT") == 0){
+                // create a new port num
                 int port = start_port + i;
                 if (fork() == 0){
                   char dir[1000];
                   memset(&dir, 0, sizeof(dir)); // zero out the buffer
                   sprintf(dir, "%s/%s", clients[i].directory, argument);
                   int fp = open(dir,O_CREAT|O_WRONLY, 0666);
+                  // socket for data transfer
                   int data_socket = socket(AF_INET, SOCK_STREAM, 0);
                   if (data_socket < 0) {
                     printf("Can't open socket\n");
@@ -256,6 +259,7 @@ int main(int argc, char * argv[]){
                   }
                   char mess[30];
                   memset(&mess, 0, sizeof(mess)); // zero out the buffer
+                  //send PUTREAD msg to client
                   sprintf(mess, "PUTREADY %d", port);
                   write(clients[i].fd, mess, strlen(mess)+1);
                   socklen_t len = sizeof(client_addr);
@@ -277,6 +281,7 @@ int main(int argc, char * argv[]){
                 }
               }
               else if (strcmp (cmd,"GET") == 0){
+                // all procedures are similar to PUT 
                 int port = start_port + i;
                 if (fork() == 0){
                   char dir[1000];
@@ -319,7 +324,7 @@ int main(int argc, char * argv[]){
                   do{
                     bytes_read = read(fp, line, 1024);
                     write(client_data_socket, line, bytes_read);
-                  } while(bytes_read != 0);
+                  } while(bytes_read != 0); // read until no bytes are left
                   free(line);
                   close(client_data_socket);
                   close(fp);
@@ -331,6 +336,7 @@ int main(int argc, char * argv[]){
                   char command[1000];
                   memset(command, 0, sizeof(command)); // zero out the buffer
                   sprintf(command, "ls '%s'", clients[i].directory);
+                  //system call
                   FILE* fp = popen(command, "r");
                   if (fp == NULL){
                     char mess[1000];
@@ -343,6 +349,7 @@ int main(int argc, char * argv[]){
                   memset(mess, 0, sizeof(mess)); // zero out the buffer
                   sprintf(mess, "SUCCESS");
                   write(clients[i].fd, mess,strlen(mess));
+                  // line in LS output
                   char* line = (char*)malloc(1024);
                   do{
                     if (feof(fp)) break;
@@ -359,10 +366,12 @@ int main(int argc, char * argv[]){
               else if (strcmp (cmd,"PWD") == 0){
                 char mess[1000];
                 memset(&mess, 0, sizeof(mess)); // zero out the buffer
+                // send back client's own directory
                 sprintf(mess, "SUCCESS %s\n", clients[i].directory);
                 write(clients[i].fd, mess,strlen(mess+1));
               }
               else if (strcmp (cmd,"CD") == 0){
+                // send 'SUCCESS FAIL' if client directory not set or no directory is provided with 'CD' command
                 if(chdir(clients[i].directory) == -1){
                   char mess[1000];
                   memset(&mess, 0, sizeof(mess)); // zero out the buffer
@@ -391,6 +400,7 @@ int main(int argc, char * argv[]){
               FD_CLR(clients[i].fd, &read_fd_set); // clear the file descriptor set for client[i]
               clients[i].fd = -1;
           }
+          //if client tries to run commands without being authenticated first
           else if (clients[i].is_authenticated != 1 && clients[i].user_id == -1) {
             printf("%d",clients[i].user_id);
             char message3[] = "AUTHENTICATION\n";
