@@ -96,6 +96,7 @@ int main(int argc, char * argv[])
       } else if (strcmp(buf, "set USER first") == 0){
         printf("set USER first\n");
       } else {
+        printf("%s",buf);
         printf("Incorrect response from server\n");
       }
     }
@@ -129,7 +130,10 @@ int main(int argc, char * argv[])
         continue;
       }
       serverResponse = strtok(serverResponse, " ");
-
+      if(strcmp(serverResponse, "AUTHENTICATION") == 0){
+        printf("Server requires you to be authenticated \n");
+        continue;
+      }
       if(strcmp(serverResponse, "PUTREADY") != 0){
         printf("Server did not respond with PUTREADY \n");
         continue;
@@ -186,7 +190,10 @@ int main(int argc, char * argv[])
         continue;
       }
       serverResponse = strtok(serverResponse, " ");
-
+      if(strcmp(serverResponse, "AUTHENTICATION") == 0){
+        printf("Server requires you to be authenticated \n");
+        continue;
+      }
       if(strcmp(serverResponse, "GETREADY") != 0){
         printf("Server did not respond with GETREADY \n");
         continue;
@@ -275,21 +282,21 @@ int main(int argc, char * argv[])
         printf("Server closed connection\n");
         exit(0);
       }
-      //printf("1%s\n", buff);
       serverResponse = strtok(buff, "\n");
-      //printf("2%s\n", serverResponse);
       if(serverResponse == NULL){
         printf("Malformed response from server \n");
         continue;
       }
       serverResponse = strtok(serverResponse, " ");
-      //printf("3%s\n", serverResponse);
+      if(strcmp(serverResponse, "AUTHENTICATION") == 0){
+        printf("Server requires you to be authenticated \n");
+        continue;
+      }
       if(strcmp(serverResponse, "SUCCESS") != 0){
         printf("Error executing PWD on server \n");
         continue;
       }
       serverResponse = strtok(NULL, " ");
-      //printf("4%s\n", serverResponse);
       if(serverResponse == NULL){
         printf("Command executed \n");
         continue;
@@ -309,6 +316,10 @@ int main(int argc, char * argv[])
       serverResponse = strtok(buff, "\n");
       if(serverResponse == NULL){
         printf("Malformed response from server \n");
+        continue;
+      }
+      if(strcmp(serverResponse, "AUTHENTICATION") == 0){
+        printf("Server requires you to be authenticated \n");
         continue;
       }
       serverResponse = strtok(serverResponse, " ");
@@ -335,6 +346,10 @@ int main(int argc, char * argv[])
       serverResponse = strtok(buff, "\n");
       if(serverResponse == NULL){
         printf("Malformed response from server \n");
+        continue;
+      }
+      if(strcmp(serverResponse, "AUTHENTICATION") == 0){
+        printf("Server requires you to be authenticated \n");
         continue;
       }
       if(strcmp(serverResponse, "SUCCESS") != 0){

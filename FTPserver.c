@@ -42,7 +42,7 @@ int main(int argc, char * argv[]){
   int nuser = atoi(line);
   struct user* users = (struct user*)malloc(sizeof(struct user)*nuser);
   int ind = 0;
-  //reading from file delimiting by space 
+  //reading from file delimiting by space
   while ((read_bytes = getline(&line, &len, fp)) != -1) {
     char * pch;
     pch = strtok(line," ");
@@ -390,9 +390,10 @@ int main(int argc, char * argv[]){
               FD_CLR(clients[i].fd, &read_fd_set); // clear the file descriptor set for client[i]
               clients[i].fd = -1;
           }
-          else {
-            char message3[] = "Not authenticated\n";
-            write(clients[i].fd,message1,strlen(message3)+1);
+          else if (clients[i].is_authenticated != 1 && clients[i].user_id == -1) {
+            printf("%d",clients[i].user_id);
+            char message3[] = "AUTHENTICATION\n";
+            write(clients[i].fd,message3,strlen(message3)+1);
           }
         }
       }

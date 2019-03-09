@@ -132,4 +132,8 @@ To test the client and the server, you can use netcat. You can also simply run t
 
 * Executing commands before authentication
   * Expected: Do not execute commands
-  * Result: We do not execute commands
+  * Result:
+    ```
+    ftp >> LS
+    Server requires you to be authenticated 
+    ```
