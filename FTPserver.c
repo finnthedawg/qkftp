@@ -14,12 +14,12 @@
 
 #define MAXCLIENTS 30
 #define MAXUSERS 100
-
+//struct decalaration for the user
 struct user{
     char name[30];
     char password[30];
 };
-
+//struct decalaration for the user
 struct client
 {
   int fd;
@@ -28,37 +28,35 @@ struct client
   char directory[100];
 };
 
-int main(int argc, char * argv[])
-{
-   FILE *fp;
-   char * line = NULL;
-    size_t len = 0;
-    ssize_t read_bytes;
-
-
-   fp = fopen("users.txt", "r"); // read mode
-   if (fp == NULL)
-   {
-      perror("Error while opening the file.\n");
-      exit(EXIT_FAILURE);
-   }
-   read_bytes = getline(&line, &len, fp);
-   int nuser = atoi(line);
-   struct user* users = (struct user*)malloc(sizeof(struct user)*nuser);
-   int ind = 0;
-    while ((read_bytes = getline(&line, &len, fp)) != -1) {
-          char * pch;
-          pch = strtok(line," ");
-          int cnt = 0;
-          while (pch != NULL){
-            if (cnt == 0) strcpy(users[ind].name, pch);
-            else strcpy(users[ind].password, pch);
-            pch = strtok (NULL, " ");
-            cnt++;
-          }
-          ind++;
+int main(int argc, char * argv[]){
+  FILE *fp;
+  char * line = NULL;
+  size_t len = 0;
+  ssize_t read_bytes;
+  fp = fopen("users.txt", "r"); // opening users.txt, which has sample user name and passwords
+  if (fp == NULL){    //if file open fails
+    perror("Error while opening the file.\n");
+    exit(EXIT_FAILURE);
+  }
+  read_bytes = getline(&line, &len, fp);
+  int nuser = atoi(line);
+  struct user* users = (struct user*)malloc(sizeof(struct user)*nuser);
+  int ind = 0;
+  //reading from file delimiting by space 
+  while ((read_bytes = getline(&line, &len, fp)) != -1) {
+    char * pch;
+    pch = strtok(line," ");
+    int cnt = 0;
+    while (pch != NULL){
+      if (cnt == 0) strcpy(users[ind].name, pch);
+      else strcpy(users[ind].password, pch);
+      pch = strtok (NULL, " ");
+      cnt++;
     }
-   fclose(fp);
+    ind++;
+  }
+  fclose(fp); // users.txt close
+  // lines 59-164 are basically from sample code supplied in the lab
   int master_socket, accepted_socket, client_socket;
   struct sockaddr_in server_addr, client_addr;
   char buf[1024];
@@ -102,33 +100,25 @@ int main(int argc, char * argv[])
   }
 
   while (1) {
-
     // clear the socket set
     FD_ZERO(&read_fd_set);
-
     // add master socket to file descriptor set
     FD_SET(master_socket, &read_fd_set);
     maxfd = master_socket;
-
     // add child sockets to set
     for (i = 0; i < MAXCLIENTS; i++) {
-
         // get socket descriptor
         client_socket = clients[i].fd;
-
         // if socket descriptor is valid, then add it to read list
         if(client_socket > 0) {
           FD_SET(client_socket, &read_fd_set);
         }
-
         // add highest file descriptor number to maxfd
         if(client_socket > maxfd)
             maxfd = client_socket;
     }
-
     // wait for activity on one of the sockets
     select(maxfd+1, &read_fd_set, NULL, NULL, NULL);
-
     // check for activity on the master_socket (if so, then it must be an incoming request)
     if (FD_ISSET(master_socket, &read_fd_set)) {
 
@@ -138,9 +128,7 @@ int main(int argc, char * argv[])
           printf("Can't accept connection\n");
           exit(1);
       }
-
       printf("Accepted connection from %s:%d\n", inet_ntoa(client_addr.sin_addr), client_addr.sin_port);
-
       // add new socket to array of clients
       for (i = 0; i < MAXCLIENTS; i++) {
 
@@ -151,39 +139,36 @@ int main(int argc, char * argv[])
               break;
           }
       }
-
       // new client can not be added, close socket
       if (i == MAXCLIENTS) {
         printf("Too many connections\n");
         close(accepted_socket);
       }
     }
-
     // loop through all clients and check for activity on all client sockets
     for (i = 0; i < MAXCLIENTS; i++) {
-
       // skip it array position is not used
       if (clients[i].fd < 0) {
         continue;
       }
-
       // check for activity
       if (FD_ISSET(clients[i].fd, &read_fd_set)) {
-
         memset(buf, 0, sizeof(buf)); //reset the buffer
         int num = recv(clients[i].fd, buf, 1024, 0); // read from socket
-
         // client closed the connection
         if (num == 0) {
           printf("[%d]Closing connection for a client\n", i);
           close(clients[i].fd);
           FD_CLR(clients[i].fd, &read_fd_set); // clear the file descriptor set for client[i]
           clients[i].fd = -1;
-        } else {
+        }
+        // if there is activity: request from client
+        else {
           printf("[%d]Received: %s\n", i, buf);
           char * pch;
           pch = strtok(buf," ");
           int cnt = 0;
+          // divide the command into command and argument: PUT(command) file.txt(argument)
           char cmd[10];
           char argument[100];
           while (pch != NULL){
@@ -192,9 +177,11 @@ int main(int argc, char * argv[])
             pch = strtok (NULL, " ");
             cnt++;
           }
+          // if commands is 'USER username'
           if (strcmp (cmd,"USER") == 0){
             int ii=0;
             int ind = -1;
+            // go through user names and find a match, if exists
             for (ii=0;ii<nuser;ii++){
                 if (strcmp(users[ii].name,argument)==0){
                     ind = ii;
@@ -205,27 +192,32 @@ int main(int argc, char * argv[])
                 char message[] = "Username does not exist";
                 write(clients[i].fd,message,strlen(message)+1);
             }
+            // if username exists, ask for password
             else {
                 char message[] = "Username OK, password required";
                 clients[i].user_id=ind;
                 write(clients[i].fd,message,strlen(message)+1);
             }
           }
+          //if command is 'PASS password'
           else if (strcmp (cmd,"PASS") == 0){
-
+            //if the username is already set
             if(clients[i].user_id!=-1){
-
+              //if the password provided matches the clients password
               if (strncmp(users[clients[i].user_id].password,argument,strlen(argument))==0){
                 char message1[] = "Authentication complete";
+                // change the value of is_authenticated to 1 for this client
                 clients[i].is_authenticated=1;
                 write(clients[i].fd,message1,strlen(message1)+1);
               }
+              //else send a 'wrong password' message
               else {
                 char message1[] = "Wrong password";
                 clients[i].is_authenticated=1;
                 write(clients[i].fd,message1,strlen(message1)+1);
               }
             }
+            // if username is not yet set, send 'set USER first' message back
             else {
               char message1[] = "set USER first";
               write(clients[i].fd,message1,strlen(message1)+1);
@@ -306,7 +298,6 @@ int main(int argc, char * argv[])
                     printf("Can't bind socket\n");
                     exit(1);
                   }
-
                   if (listen(data_socket, 5) < 0) {
                     close(data_socket);
                     printf("Can't listen on socket\n");
@@ -339,7 +330,6 @@ int main(int argc, char * argv[])
                   char command[1000];
                   memset(command, 0, sizeof(command)); // zero out the buffer
                   sprintf(command, "ls '%s'", clients[i].directory);
-                  //printf("%s\n", command);
                   FILE* fp = popen(command, "r");
                   if (fp == NULL){
                     char mess[1000];
@@ -348,11 +338,9 @@ int main(int argc, char * argv[])
                     write(clients[i].fd, mess,strlen(mess+1));
                     continue;
                   }
-
                   char mess[1000];
                   memset(mess, 0, sizeof(mess)); // zero out the buffer
                   sprintf(mess, "SUCCESS");
-                  //printf("%s\n", mess);
                   write(clients[i].fd, mess,strlen(mess));
                   char* line = (char*)malloc(1024);
                   do{
@@ -361,11 +349,9 @@ int main(int argc, char * argv[])
                     fgets(line, 1024, fp);
                     write(clients[i].fd, line, strlen(line));
                   } while (1);
-
                   write(clients[i].fd, "\r\n\0", 3);
                   free(line);
                   fclose(fp);
-                  //printf("%s\n", "We are done");
                   return 0;
                 }
               }
@@ -373,7 +359,6 @@ int main(int argc, char * argv[])
                 char mess[1000];
                 memset(&mess, 0, sizeof(mess)); // zero out the buffer
                 sprintf(mess, "SUCCESS %s\n", clients[i].directory);
-                //printf("%s\n", mess);
                 write(clients[i].fd, mess,strlen(mess+1));
               }
               else if (strcmp (cmd,"CD") == 0){
@@ -381,7 +366,6 @@ int main(int argc, char * argv[])
                   char mess[1000];
                   memset(&mess, 0, sizeof(mess)); // zero out the buffer
                   sprintf(mess, "SUCCESS FAIL\n");
-                  //printf("%s\n", "SF1");
                   write(clients[i].fd, mess,strlen(mess+1));
 
                 } else{
@@ -389,15 +373,12 @@ int main(int argc, char * argv[])
                     char mess[1000];
                     memset(&mess, 0, sizeof(mess)); // zero out the buffer
                     sprintf(mess, "SUCCESS FAIL\n");
-                    //printf("%s\n", "SF2");
                     write(clients[i].fd, mess,strlen(mess+1));
                   } else{
                     char mess[1000];
                     memset(&mess, 0, sizeof(mess)); // zero out the buffer
                     sprintf(mess, "SUCCESS\n");
-                    //printf("%s\n", mess);
                     write(clients[i].fd, mess,strlen(mess+1));
-
                     getcwd(clients[i].directory, 1024);
                   }
                 }
@@ -408,6 +389,10 @@ int main(int argc, char * argv[])
               close(clients[i].fd);
               FD_CLR(clients[i].fd, &read_fd_set); // clear the file descriptor set for client[i]
               clients[i].fd = -1;
+          }
+          else {
+            char message3[] = "Not authenticated\n";
+            write(clients[i].fd,message1,strlen(message3)+1);
           }
         }
       }
