@@ -345,6 +345,7 @@ int main(int argc, char * argv[])
       char* line = (char*)malloc(1024);
       int bytes_read = 0;
       do{
+        memset(line, 0 , 1024);
         bytes_read = read(sockfd, line, 1024);
         printf("%s",line);
       } while(bytes_read != 0 && strcmp(line,"\r\n") != 0);
